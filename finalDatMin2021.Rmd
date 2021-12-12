@@ -1,0 +1,121 @@
+---
+title: "finalDatMin2021"
+author: "M Rifqi Jundullah"
+date: "December 12, 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(fpc)
+library(dplyr)
+library(cluster) 
+library(ggplot2)
+library(tidyverse)
+library(factoextra)
+```
+
+Dataset 03_Indeks Desa Membangun
+
+``` {r}
+library(readxl)
+dataset <- read_excel("C:/Users/ACER/Downloads/Dataset 03_Indeks Desa Membangun.xls")
+colnames(dataset)
+dataset1<-dataset[,4:14]
+head(dataset1)
+```
+
+```{r}
+# terdapat 8 baris dengan data yang tidak lengkap, sehingga di drop
+df <- dataset1[complete.cases(dataset1),]
+head(df)
+```
+Analisis Deskriptif
+```{r}
+#Deskriptif Variabel Usia Pelanggan
+
+#Analisis Korelasi
+cor(df) #non multikolinearitas
+
+#Mengecek Outlier
+boxplot(scale(df),
+        col=c("azure3","light blue","navajowhite2")) 
+
+#Penentuan distance
+jarak <- get_dist(df, stand = TRUE, method = "euclidean")
+```
+#Penentuan Optimum Klaster Menggunakan Silhouette Methode
+#1. K-Means
+```{r}
+set.seed(123)
+fviz_nbclust(scale(df), kmeans, method="silhouette",
+             nstart=500, linecolor="red4", k.max=10, iter.max=100)+
+  labs(subtitle = "Silhouette Method for K-Means Clustering")
+```
+#2. K-Medoids
+```{r}
+set.seed(123)
+fviz_nbclust(scale(df), pam, method="silhouette",
+             nstart=500, linecolor="red4", k.max=10)+
+  labs(subtitle = "Silhouette Method for K-Medoids Clustering")
+```
+#Clustering
+#1. K-Means Clustering
+```{r}
+kmeans_fit <- eclust(df, "kmeans", k=2, stand=T,
+                  nstart=500, graph=F, iter.max=100, seed=123)
+fviz_cluster(kmeans_fit, labelsize=9, show.clust.cent = F, 
+             geom=c("text","point"), repel=T, pointsize=1,
+             main="Cluster Plot (K-Means)")
+```
+#2. K-Medoids Clustering
+```{r}
+kmedoids_fit <- eclust(df, "pam", k=2, stand=T,
+               nstart=25, graph=F, seed=123, nboot = 100)
+fviz_cluster(kmedoids_fit, labelsize=9, show.clust.cent = F, 
+             geom=c("text","point"), repel=T, pointsize=1,
+             main="Cluster Plot (K-Medoids)")
+```
+  
+#Jumlah Observasi Tiap Cluster
+```{r}
+table(kmeans_fit$cluster)
+```
+
+```{r}
+table(kmedoids_fit$clustering)
+```
+
+#Evaluasi Model
+#Separation Index, Entropy, Pearson Gamma, CH Index
+```{r}
+evalkmeans <- cluster.stats(jarak, kmeans_fit$cluster)
+evalkmeans$avg.silwidth
+evalkmeans$dunn
+evalkmeans$sindex
+evalkmeans$entropy
+evalkmeans$ch
+evalkmeans$pearsongamma
+evalkmeans$wb.ratio
+```
+
+```{r}
+evalkmedoids <- cluster.stats(jarak, kmedoids_fit$clustering)
+evalkmedoids$avg.silwidth
+evalkmedoids$dunn
+evalkmedoids$sindex
+evalkmedoids$entropy
+evalkmedoids$ch
+evalkmedoids$pearsongamma
+evalkmedoids$wb.ratio
+```
+
+#Visualisasi dan Analisis Hasil Cluster
+#Mean setiap variabel pada setiap clulster yang terbentuk
+```{r}
+aggregate(df, list(kmeans_fit$cluster), FUN=mean)
+```
+
+```{r}
+aggregate(df, list(kmedoids_fit$cluster), FUN=mean)
+```
