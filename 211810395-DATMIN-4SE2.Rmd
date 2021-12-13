@@ -1,0 +1,79 @@
+---
+title: "finalDatMinIDM"
+author: "M Rifqi Jundullah"
+date: "December 13, 2021"
+output: html_document
+---
+#Preprocessing
+##Membaca data dan memilih variabel tanpa NA
+``` {r}
+library(readxl)
+dataset <- read_excel("C:/Users/ACER/Downloads/Dataset 03_Indeks Desa Membangun.xls")
+colnames(dataset)
+```
+##feature engineering
+Variabel yang digunakan adalah "Dimensi1", "Dimensi2", "Dimensi3", "Dimensi4", "Dimensi5", "PersentaseDesaTertinggal","PersentaseDesaBerkembang",
+"PersentaseDesaMandiri". Terdapat juga 8 baris dengan data NA yang akan di drop.
+```{r}
+dataset1<-dataset[c("Dimensi1", "Dimensi2", "Dimensi3", "Dimensi4", "Dimensi5", "PersentaseDesaTertinggal", "PersentaseDesaBerkembang","PersentaseDesaMandiri")]
+df <- dataset1[complete.cases(dataset1),]
+head(df)
+```
+#Analisis Deskriptif
+##Analisis Korelasi
+```{r}
+cor(df)
+```
+##Mengecek Outlier
+```{r}
+boxplot(df,
+        col=c("azure3","light blue","navajowhite2")) 
+```
+#Clustering K-Medoids
+##Penentuan distance
+```{r}
+library(factoextra)
+jarak <- get_dist(df, stand = TRUE, method = "euclidean")
+```
+##Penentuan Optimum Klaster Menggunakan Silhouette Methode
+```{r}
+library(cluster)
+set.seed(123)
+fviz_nbclust(scale(df), pam, method="silhouette",
+             nstart=500, linecolor="red4", k.max=10)+
+  labs(subtitle = "Silhouette Method for K-Medoids Clustering")
+```
+##K-Medoids Clustering
+```{r}
+kmedoids_fit <- eclust(scale(df), "pam", k=5, stand=T,
+               nstart=25, graph=F, seed=123, nboot = 100)
+fviz_cluster(kmedoids_fit, labelsize=9, show.clust.cent = F, 
+             geom=c("text","point"), repel=T, pointsize=1,
+             main="Cluster Plot (K-Medoids)")
+```
+##Jumlah Observasi tiap cluster
+```{r}
+table(kmedoids_fit$clustering)
+```
+
+#Evaluasi Model
+```{r}
+library(fpc)
+eval <- cluster.stats(jarak, kmedoids_fit$clustering)
+eval$avg.silwidth
+```
+```{r}
+eval$dunn
+```
+```{r}
+eval$sindex
+```
+```{r}
+eval$entropy
+```
+```{r}
+eval$ch
+```
+```{r}
+eval$pearsongamma
+```
